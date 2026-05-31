@@ -1,0 +1,53 @@
+{
+  "name": "agents-md-copilot",
+  "displayName": "AGENTS.md for Copilot",
+  "description": "Injects ~/AGENTS.md into GitHub Copilot's system instructions.",
+  "version": "0.0.1",
+  "publisher": "kevinperez",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kevinnio/agents-md-copilot"
+  },
+  "keywords": ["copilot", "github-copilot", "instructions", "ai", "agents"],
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": ["AI"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "AGENTS.md for Copilot",
+      "properties": {
+        "agentsMd.enableForReview": {
+          "type": "boolean",
+          "default": false,
+          "description": "Inject AGENTS.md into Copilot review selection instructions."
+        },
+        "agentsMd.enableForCommitMessages": {
+          "type": "boolean",
+          "default": false,
+          "description": "Inject AGENTS.md into Copilot commit message generation instructions."
+        },
+        "agentsMd.enableForTests": {
+          "type": "boolean",
+          "default": false,
+          "description": "Inject AGENTS.md into Copilot test generation instructions."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node ./node_modules/typescript/bin/tsc -p ./",
+    "watch": "node ./node_modules/typescript/bin/tsc -watch -p ./",
+    "vscode:prepublish": "node ./node_modules/typescript/bin/tsc -p ./",
+    "package": "node_modules/.bin/vsce package --no-dependencies --skip-license"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.93.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.4.0"
+  }
+}
