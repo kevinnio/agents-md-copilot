@@ -1,12 +1,12 @@
-name: Release
+name: CI
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+  pull_request:
 
 jobs:
-  release:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +28,3 @@ jobs:
 
       - name: Compile
         run: node ./node_modules/typescript/bin/tsc -p ./
-
-      - name: Publish to VS Marketplace
-        run: node_modules/.bin/vsce publish --no-dependencies --skip-license
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}

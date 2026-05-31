@@ -24,9 +24,9 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     watcher.onDidChange(sync),
     watcher.onDidCreate(sync),
     watcher.onDidDelete(clear),
-    vscode.workspace.onDidChangeConfiguration(e => {
+    vscode.workspace.onDidChangeConfiguration(async e => {
       if (e.affectsConfiguration('agentsMd')) {
-        sync();
+        await sync();
       }
     }),
     watcher
