@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
-import { readFile } from 'fs/promises';
+import { access } from 'fs/promises';
 
-const MARKER = '~/AGENTS.md';
+const AGENTS_MD_PATH = path.join(os.homedir(), 'AGENTS.md');
 
 const ALWAYS_ENABLED = ['codeGeneration.instructions'];
 
 const OPTIONAL_SETTINGS: Record<string, string> = {
   'reviewSelection.instructions': 'agentsMd.enableForReview',
   'commitMessageGeneration.instructions': 'agentsMd.enableForCommitMessages',
-  'testGeneration.instructions': 'agentsMd.enableForTests',
+  'pullRequestDescriptionGeneration.instructions': 'agentsMd.enableForPullRequestDescriptions',
 };
 
 export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
@@ -37,14 +37,6 @@ export function deactivate(): Promise<void> {
   return clear();
 }
 
-async function readAgentsMd(): Promise<string | null> {
-  try {
-    return await readFile(path.join(os.homedir(), 'AGENTS.md'), 'utf8');
-  } catch {
-    return null;
-  }
-}
-
 function activeKeys(): string[] {
   const extCfg = vscode.workspace.getConfiguration('agentsMd');
   return [
@@ -55,9 +47,17 @@ function activeKeys(): string[] {
   ];
 }
 
+async function fileExists(): Promise<boolean> {
+  try {
+    await access(AGENTS_MD_PATH);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function sync(): Promise<void> {
-  const content = await readAgentsMd();
-  if (!content) {
+  if (!(await fileExists())) {
     return clear();
   }
 
@@ -65,37 +65,36 @@ async function sync(): Promise<void> {
   const active = activeKeys();
 
   for (const key of active) {
-    const existing = (cfg.get<{ text?: string }[]>(key) ?? []).filter(
-      e => !e.text?.startsWith(MARKER)
+    const existing = (cfg.get<{ file?: string; text?: string }[]>(key) ?? []).filter(
+      e => e.file !== AGENTS_MD_PATH
     );
     await cfg.update(
       key,
-      [{ text: `${MARKER}\n${content}` }, ...existing],
+      [{ file: AGENTS_MD_PATH }, ...existing],
       vscode.ConfigurationTarget.Global
     );
   }
 
-  // Strip from settings that are now disabled
+  // Remove reference from settings that are disabled
   const nowDisabled = Object.keys(OPTIONAL_SETTINGS).filter(k => !active.includes(k));
   for (const key of nowDisabled) {
-    await stripMarker(cfg, key);
+    await removeReference(cfg, key);
   }
 }
 
 async function clear(): Promise<void> {
   const cfg = vscode.workspace.getConfiguration('github.copilot.chat');
-  const allKeys = [...ALWAYS_ENABLED, ...Object.keys(OPTIONAL_SETTINGS)];
-  for (const key of allKeys) {
-    await stripMarker(cfg, key);
+  for (const key of [...ALWAYS_ENABLED, ...Object.keys(OPTIONAL_SETTINGS)]) {
+    await removeReference(cfg, key);
   }
 }
 
-async function stripMarker(
+async function removeReference(
   cfg: vscode.WorkspaceConfiguration,
   key: string
 ): Promise<void> {
-  const existing = cfg.get<{ text?: string }[]>(key) ?? [];
-  const filtered = existing.filter(e => !e.text?.startsWith(MARKER));
+  const existing = cfg.get<{ file?: string; text?: string }[]>(key) ?? [];
+  const filtered = existing.filter(e => e.file !== AGENTS_MD_PATH);
   await cfg.update(
     key,
     filtered.length > 0 ? filtered : undefined,

@@ -23,17 +23,17 @@ The extension picks it up on startup and injects it into Copilot's code generati
 
 ## Optional Settings
 
-By default only code generation (panel chat and inline chat) is affected. You can extend injection to other Copilot features in your settings:
+`~/AGENTS.md` is always injected into code generation (chat and inline). The settings below extend it to additional Copilot features:
 
 | Setting | Description | Default |
 |---|---|---|
 | `agentsMd.enableForReview` | Copilot code review | `false` |
 | `agentsMd.enableForCommitMessages` | Copilot commit message generation | `false` |
-| `agentsMd.enableForTests` | Copilot test generation | `false` |
+| `agentsMd.enableForPullRequestDescriptions` | Copilot pull request description generation | `false` |
 
 ## How It Works
 
-On activation the extension reads `~/AGENTS.md` and writes its content into the `github.copilot.chat.codeGeneration.instructions` global user setting (and any opted-in settings). It tags its entry so it can safely remove it on deactivation without touching instructions you've set manually.
+On activation the extension checks that `~/AGENTS.md` exists and writes a `{ file: "/absolute/path/to/AGENTS.md" }` reference object into the opted-in Copilot settings. VS Code reads the file on each request so edits to `~/AGENTS.md` take effect immediately.
 
 ## Publishing to the Marketplace
 

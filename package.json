@@ -40,10 +40,10 @@
           "default": false,
           "description": "Inject AGENTS.md into Copilot commit message generation instructions."
         },
-        "agentsMd.enableForTests": {
+        "agentsMd.enableForPullRequestDescriptions": {
           "type": "boolean",
           "default": false,
-          "description": "Inject AGENTS.md into Copilot test generation instructions."
+          "description": "Inject AGENTS.md into Copilot pull request description generation instructions."
         }
       }
     }
@@ -53,7 +53,7 @@
     "watch": "node ./node_modules/typescript/bin/tsc -watch -p ./",
     "vscode:prepublish": "node ./node_modules/typescript/bin/tsc -p ./",
     "lint": "node_modules/.bin/eslint src",
-    "package": "node_modules/.bin/vsce package --no-dependencies --skip-license"
+    "package": "npx vsce package --no-dependencies"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
