@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
-import { access } from 'fs/promises';
+import { access, readFile } from 'fs/promises';
 
 const AGENTS_MD_PATH = path.join(os.homedir(), 'AGENTS.md');
 
@@ -56,8 +56,16 @@ async function fileExists(): Promise<boolean> {
   }
 }
 
-async function sync(): Promise<void> {
+async function readAgentsMd(): Promise<string | undefined> {
   if (!(await fileExists())) {
+    return undefined;
+  }
+  return readFile(AGENTS_MD_PATH, 'utf8');
+}
+
+async function sync(): Promise<void> {
+  const content = await readAgentsMd();
+  if (content === undefined) {
     return clear();
   }
 
@@ -65,12 +73,12 @@ async function sync(): Promise<void> {
   const active = activeKeys();
 
   for (const key of active) {
-    const existing = (cfg.get<{ file?: string; text?: string }[]>(key) ?? []).filter(
-      e => e.file !== AGENTS_MD_PATH
+    const existing = (cfg.get<InstructionEntry[]>(key) ?? []).filter(
+      e => !isOwnedByUs(e, content)
     );
     await cfg.update(
       key,
-      [{ file: AGENTS_MD_PATH }, ...existing],
+      [{ text: content, _agentsMd: true }, ...existing],
       vscode.ConfigurationTarget.Global
     );
   }
@@ -78,26 +86,44 @@ async function sync(): Promise<void> {
   // Remove reference from settings that are disabled
   const nowDisabled = Object.keys(OPTIONAL_SETTINGS).filter(k => !active.includes(k));
   for (const key of nowDisabled) {
-    await removeReference(cfg, key);
+    await removeReference(cfg, key, content);
   }
 }
 
 async function clear(): Promise<void> {
   const cfg = vscode.workspace.getConfiguration('github.copilot.chat');
+  const content = await readAgentsMd();
   for (const key of [...ALWAYS_ENABLED, ...Object.keys(OPTIONAL_SETTINGS)]) {
-    await removeReference(cfg, key);
+    await removeReference(cfg, key, content);
   }
 }
 
 async function removeReference(
   cfg: vscode.WorkspaceConfiguration,
-  key: string
+  key: string,
+  content?: string
 ): Promise<void> {
-  const existing = cfg.get<{ file?: string; text?: string }[]>(key) ?? [];
-  const filtered = existing.filter(e => e.file !== AGENTS_MD_PATH);
+  const existing = cfg.get<InstructionEntry[]>(key) ?? [];
+  const filtered = existing.filter(e => !isOwnedByUs(e, content));
   await cfg.update(
     key,
     filtered.length > 0 ? filtered : undefined,
     vscode.ConfigurationTarget.Global
   );
+}
+
+type InstructionEntry = { file?: string; text?: string; _agentsMd?: boolean };
+
+// ponytail: matches current text-injecting entries, legacy { file } refs, and
+// stale text entries from prior versions (e.g. "~/AGENTS.md\n<content>").
+// Ceiling: if another tool writes an entry whose text is identical to
+// AGENTS.md, we'd drop it too. Upgrade path: use a dedicated setting key.
+function isOwnedByUs(e: InstructionEntry, content?: string): boolean {
+  if (e._agentsMd === true) return true;
+  if (e.file === AGENTS_MD_PATH) return true;
+  if (content !== undefined && typeof e.text === 'string') {
+    if (e.text === content) return true;
+    if (e.text.endsWith(content) && e.text.startsWith('~/AGENTS.md')) return true;
+  }
+  return false;
 }

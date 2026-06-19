@@ -33,7 +33,7 @@ The extension picks it up on startup and injects it into Copilot's code generati
 
 ## How It Works
 
-On activation the extension checks that `~/AGENTS.md` exists and writes a `{ file: "/absolute/path/to/AGENTS.md" }` reference object into the opted-in Copilot settings. VS Code reads the file on each request so edits to `~/AGENTS.md` take effect immediately.
+On activation the extension reads `~/AGENTS.md` and writes a `{ text: "<file contents>" }` object into the opted-in Copilot settings, so the full file content is injected directly into Copilot's context. A file watcher re-syncs on every change to `~/AGENTS.md`, so edits take effect immediately without restarting VS Code.
 
 ## Publishing to the Marketplace
 
